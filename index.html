@@ -10,14 +10,17 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- CDNs -->
+  <!-- Core CDNs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js" crossorigin="anonymous"></script>
   
-  <!-- WebLLM Bundle -->
-  <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/lib/index.js" crossorigin="anonymous"></script>
+  <!-- Load WebLLM as an ES Module into global scope -->
+  <script type="module">
+    import * as webllm from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/+esm";
+    window.webllm = webllm;
+  </script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Quicksand:wght@500;700&display=swap');
@@ -51,7 +54,7 @@
 
       const initializeLocalAI = async () => {
         if (!navigator.gpu) {
-          alert("WebGPU is not supported on this browser/device.");
+          alert("WebGPU is not supported on this browser or device.");
           return;
         }
 
@@ -60,9 +63,8 @@
 
         try {
           const webllm = window.webllm;
-          if (!webllm) throw new Error("WebLLM bundle not loaded from CDN.");
+          if (!webllm) throw new Error("WebLLM module is still loading. Please wait 5 seconds and try again.");
 
-          // Instantiate engine using standard CreateMLCEngine
           const selectedModel = "SmolLM2-360M-Instruct-q4f16-MLC";
           const engine = await webllm.CreateMLCEngine(selectedModel, {
             initProgressCallback: (report) => {
@@ -90,7 +92,7 @@
             <button
               onClick={initializeLocalAI}
               disabled={aiLoading || !gpuSupported}
-              className="w-full py-2 bg-amber-600 text-white text-xs font-bold rounded-xl disabled:opacity-50"
+              className="w-full py-2 bg-amber-600 text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:bg-amber-700"
             >
               {aiLoading ? "Loading Model..." : "Initialize Local AI"}
             </button>
@@ -99,7 +101,8 @@
       );
     }
 
-    ReactDOM.createRoot(defaultRoot = document.getElementById('root')).render(<App />);
+    // Fixed: Correct DOM attachment without undeclared variable
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
