@@ -5,36 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>The Emperor Has No Clothes - Crayon Storyteller & Local AI</title>
   
-  <!-- Manifest for PWA installation -->
   <link rel="manifest" id="pwa-manifest" />
   <meta name="theme-color" content="#d97706" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- CDNs for zero-build execution -->
+  <!-- CDNs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js" crossorigin="anonymous"></script>
+  
+  <!-- WebLLM Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/lib/index.js" crossorigin="anonymous"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Quicksand:wght@500;700&display=swap');
-    body {
-      font-family: 'Quicksand', sans-serif;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .font-handwriting {
-      font-family: 'Fredoka', cursive;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #cbd5e1;
-      border-radius: 9999px;
-    }
+    body { font-family: 'Quicksand', sans-serif; touch-action: manipulation; user-select: none; }
+    .font-handwriting { font-family: 'Fredoka', cursive; }
   </style>
 </head>
 <body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden">
@@ -43,136 +31,39 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // Inline SVG Icon components
-    const PlayIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
-    const PauseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
-    const ChevronLeftIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>;
-    const ChevronRightIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>;
-    const HelpCircleIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
-    const DownloadIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
-    const SendIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
-
-    // Story scenes data
     const STORY_SCENES = [
-      {
-        id: 1,
-        title: "The Vain Emperor",
-        text: "Many years ago, there lived an Emperor who loved fine clothes more than anything else. He spent all his gold on grand robes to show off to his grand empire.",
-        palette: { bg: "#fef3c7", primary: "#d97706", accent: "#b45309", sky: "#bae6fd" },
-        drawType: "emperor"
-      },
-      {
-        id: 2,
-        title: "The Two Swindlers",
-        text: "One day, two crafty swindlers came to the city. They claimed they could weave a fabric so miraculous that it was completely invisible to foolish people.",
-        palette: { bg: "#fef9c3", primary: "#ca8a04", accent: "#a16207", sky: "#e0f2fe" },
-        drawType: "swindlers"
-      },
-      {
-        id: 3,
-        title: "The Empty Loom",
-        text: "The Emperor gave them gold and silk. The weavers set up looms and pretended to work hard, tossing empty shuttles back and forth through empty air.",
-        palette: { bg: "#fed7aa", primary: "#ea580c", accent: "#c2410c", sky: "#e0e7ff" },
-        drawType: "loom"
-      },
-      {
-        id: 4,
-        title: "Fear of Being Foolish",
-        text: "The Emperor sent his trusted minister to inspect the cloth. Seeing nothing, but terrified of being called a fool, the minister praised the non-existent patterns.",
-        palette: { bg: "#e9d5ff", primary: "#9333ea", accent: "#7e22ce", sky: "#fae8ff" },
-        drawType: "minister"
-      },
-      {
-        id: 5,
-        title: "Dressing Up in Air",
-        text: "When the suit was 'finished', the swindlers pretended to help the Emperor dress. 'Notice how light it is! Like a spider web!' they marveled.",
-        palette: { bg: "#fbcfe8", primary: "#db2777", accent: "#be185d", sky: "#fce7f3" },
-        drawType: "dressing"
-      },
-      {
-        id: 6,
-        title: "The Grand Procession",
-        text: "The Emperor marched proudly through the streets under a golden canopy. All the townspeople cheered and praised the invisible clothes, afraid to admit they saw nothing.",
-        palette: { bg: "#bfdbfe", primary: "#2563eb", accent: "#1d4ed8", sky: "#dbeafe" },
-        drawType: "procession"
-      },
-      {
-        id: 7,
-        title: "The Truth Revealed",
-        text: "Suddenly, a small child cried out, 'But he has nothing on at all!' The crowd began to whisper, until everyone laughed. The Emperor blushed, but held his head high and marched on.",
-        palette: { bg: "#bbf7d0", primary: "#16a34a", accent: "#15803d", sky: "#dcfce7" },
-        drawType: "revelation"
-      }
+      { id: 1, title: "The Vain Emperor", text: "Many years ago, there lived an Emperor who loved fine clothes more than anything else.", palette: { bg: "#fef3c7", primary: "#d97706", accent: "#b45309", sky: "#bae6fd" } },
+      { id: 2, title: "The Two Swindlers", text: "One day, two crafty swindlers came to the city. They claimed they could weave a fabric so miraculous that it was completely invisible to foolish people.", palette: { bg: "#fef9c3", primary: "#ca8a04", accent: "#a16207", sky: "#e0f2fe" } }
     ];
 
     function App() {
-      const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
-      const [speechRate, setSpeechRate] = useState(1.0);
-      const [isPlaying, setIsPlaying] = useState(false);
-      const [isQAOpen, setIsQAOpen] = useState(false);
-      const [deferredPrompt, setDeferredPrompt] = useState(null);
-
-      // Local AI State
       const [aiEngine, setAiEngine] = useState(null);
       const [aiLoading, setAiLoading] = useState(false);
       const [aiProgress, setAiProgress] = useState("");
-      const [userQuestion, setUserQuestion] = useState("");
-      const [qaHistory, setQaHistory] = useState([
-        { role: "assistant", content: "Hi! Ask me anything about this story or scene. I run completely offline inside your browser!" }
-      ]);
-      const [isGenerating, setIsGenerating] = useState(false);
+      const [gpuSupported, setGpuSupported] = useState(true);
 
-      const canvasRef = useRef(null);
-      const touchStartX = useRef(0);
-      const touchEndX = useRef(0);
-      const chatBottomRef = useRef(null);
-
-      const currentScene = STORY_SCENES[currentSceneIndex];
-
-      // Auto-scroll chat drawer
       useEffect(() => {
-        chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, [qaHistory, isGenerating]);
-
-      // PWA setup
-      useEffect(() => {
-        const handlePrompt = (e) => {
-          e.preventDefault();
-          setDeferredPrompt(e);
-        };
-        window.addEventListener('beforeinstallprompt', handlePrompt);
-
-        if ('serviceWorker' in navigator) {
-          const swCode = `
-            const CACHE_NAME = 'crayon-storyteller-v1';
-            self.addEventListener('install', e => {
-              e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['/'])));
-              self.skipWaiting();
-            });
-            self.addEventListener('fetch', e => {
-              e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-            });
-          `;
-          const blob = new Blob([swCode], { type: 'application/javascript' });
-          navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        if (!navigator.gpu) {
+          setGpuSupported(false);
+          setAiProgress("WebGPU is not enabled in your browser. Enable 'Unsafe WebGPU' in chrome://flags or use Chrome/Edge on Desktop.");
         }
-
-        return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
       }, []);
 
-      // Initialize Local WebLLM Engine dynamically
       const initializeLocalAI = async () => {
-        if (aiEngine || aiLoading) return;
+        if (!navigator.gpu) {
+          alert("WebGPU is not supported on this browser/device.");
+          return;
+        }
+
         setAiLoading(true);
-        setAiProgress("Loading WebLLM module...");
+        setAiProgress("Initializing engine...");
 
         try {
-          // Import WebLLM directly via ESM import
-          const webllm = await import("https://esm.run/@mlc-ai/web-llm");
-          
-          // Use lightweight model for fast offline inference (~250MB - 800MB)
-          const selectedModel = "SmolLM2-360M-Instruct-q4f16-MLC";
+          const webllm = window.webllm;
+          if (!webllm) throw new Error("WebLLM bundle not loaded from CDN.");
 
+          // Instantiate engine using standard CreateMLCEngine
+          const selectedModel = "SmolLM2-360M-Instruct-q4f16-MLC";
           const engine = await webllm.CreateMLCEngine(selectedModel, {
             initProgressCallback: (report) => {
               setAiProgress(report.text);
@@ -181,358 +72,34 @@
 
           setAiEngine(engine);
           setAiLoading(false);
-          setAiProgress("Local AI Ready!");
         } catch (err) {
-          console.error("Local AI Initialization Failed:", err);
+          console.error("Local AI Error:", err);
           setAiLoading(false);
-          setAiProgress("WebGPU not supported or load failed. Check browser compatibility.");
-        }
-      };
-
-      // Handle sending story question to local LLM
-      const handleSendQuestion = async (e) => {
-        e?.preventDefault();
-        if (!userQuestion.trim() || isGenerating) return;
-
-        const qText = userQuestion;
-        setUserQuestion("");
-        
-        const newHistory = [...qaHistory, { role: "user", content: qText }];
-        setQaHistory(newHistory);
-        setIsGenerating(true);
-
-        if (!aiEngine) {
-          // Fallback if AI engine isn't initialized yet
-          setTimeout(() => {
-            setQaHistory([...newHistory, { 
-              role: "assistant", 
-              content: `[Context: Card ${currentSceneIndex + 1} - "${currentScene.title}"]\n\nTo ask questions, please initialize the local AI using the button above!` 
-            }]);
-            setIsGenerating(false);
-          }, 500);
-          return;
-        }
-
-        try {
-          // Construct Context RAG Prompt using current scene & story history
-          const systemPrompt = `You are an expert story guide for children. 
-Current Story: "The Emperor Has No Clothes" by Hans Christian Andersen.
-Current Active Scene (${currentSceneIndex + 1}/${STORY_SCENES.length}): "${currentScene.title}"
-Scene Text: "${currentScene.text}"
-
-Answer the user's question briefly and accurately based on the story. Keep explanations simple and engaging.`;
-
-          const messages = [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: qText }
-          ];
-
-          // Stream completion tokens from local WebGPU model
-          const chunks = await aiEngine.chat.completions.create({
-            messages,
-            stream: true,
-            temperature: 0.7
-          });
-
-          let replyText = "";
-          setQaHistory([...newHistory, { role: "assistant", content: "..." }]);
-
-          for await (const chunk of chunks) {
-            const token = chunk.choices[0]?.delta?.content || "";
-            replyText += token;
-            setQaHistory([...newHistory, { role: "assistant", content: replyText }]);
-          }
-
-        } catch (err) {
-          console.error("Inference Error:", err);
-          setQaHistory([...newHistory, { role: "assistant", content: "Error running inference locally: " + err.message }]);
-        } finally {
-          setIsGenerating(false);
-        }
-      };
-
-      // Draw Crayon Visual on Canvas
-      useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-
-        ctx.fillStyle = currentScene.palette.bg;
-        ctx.fillRect(0, 0, width, height);
-
-        const drawCrayonLine = (x1, y1, x2, y2, color, lineWidth = 4) => {
-          ctx.strokeStyle = color;
-          ctx.lineWidth = lineWidth;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          const steps = Math.hypot(x2 - x1, y2 - y1) / 4;
-          let cx = x1, cy = y1;
-          ctx.moveTo(cx, cy);
-          for (let i = 0; i < steps; i++) {
-            const t = i / steps;
-            const nx = x1 + (x2 - x1) * t + (Math.random() - 0.5) * 2;
-            const ny = y1 + (y2 - y1) * t + (Math.random() - 0.5) * 2;
-            ctx.lineTo(nx, ny);
-          }
-          ctx.stroke();
-        };
-
-        ctx.save();
-        ctx.fillStyle = currentScene.palette.sky;
-        ctx.fillRect(20, 20, width - 40, height / 2.5);
-
-        drawCrayonLine(10, height - 40, width - 10, height - 40, currentScene.palette.accent, 6);
-
-        if (currentScene.drawType === "emperor" || currentScene.drawType === "dressing") {
-          drawCrayonLine(width/2 - 25, 60, width/2 - 25, 40, '#eab308', 5);
-          drawCrayonLine(width/2 - 25, 60, width/2, 50, '#eab308', 5);
-          drawCrayonLine(width/2, 50, width/2 + 25, 60, '#eab308', 5);
-          drawCrayonLine(width/2 + 25, 60, width/2 + 25, 40, '#eab308', 5);
-          drawCrayonLine(width/2 - 20, 80, width/2 + 20, 80, currentScene.palette.primary, 8);
-          drawCrayonLine(width/2, 90, width/2, 170, currentScene.palette.primary, 12);
-        } else if (currentScene.drawType === "swindlers") {
-          drawCrayonLine(width/3, 80, width/3, 160, '#ca8a04', 8);
-          drawCrayonLine((width/3)*2, 80, (width/3)*2, 160, '#a16207', 8);
-        } else {
-          drawCrayonLine(width/4, height/2, (width/4)*3, height/2, currentScene.palette.primary, 10);
-          drawCrayonLine(width/2, height/3, width/2, (height/3)*2, currentScene.palette.accent, 8);
-        }
-
-        ctx.restore();
-      }, [currentSceneIndex]);
-
-      // Audio Narration Controls
-      const toggleSpeech = () => {
-        if (!('speechSynthesis' in window)) return;
-
-        if (isPlaying) {
-          window.speechSynthesis.cancel();
-          setIsPlaying(false);
-        } else {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(currentScene.text);
-          utterance.rate = speechRate;
-          utterance.onend = () => setIsPlaying(false);
-          utterance.onerror = () => setIsPlaying(false);
-          window.speechSynthesis.speak(utterance);
-          setIsPlaying(true);
-        }
-      };
-
-      // Touch Swipe Handlers
-      const handleTouchStart = (e) => {
-        touchStartX.current = e.changedTouches[0].screenX;
-      };
-
-      const handleTouchEnd = (e) => {
-        touchEndX.current = e.changedTouches[0].screenX;
-        const diff = touchStartX.current - touchEndX.current;
-        if (Math.abs(diff) > 40) {
-          if (diff > 0 && currentSceneIndex < STORY_SCENES.length - 1) {
-            setCurrentSceneIndex(i => i + 1);
-            window.speechSynthesis?.cancel();
-            setIsPlaying(false);
-          } else if (diff < 0 && currentSceneIndex > 0) {
-            setCurrentSceneIndex(i => i - 1);
-            window.speechSynthesis?.cancel();
-            setIsPlaying(false);
-          }
-        }
-      };
-
-      const handleInstallPWA = () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+          setAiProgress("Initialization error: " + err.message);
         }
       };
 
       return (
-        <div className="max-w-md mx-auto w-full min-h-screen flex flex-col justify-between p-4 relative">
+        <div className="p-6 max-w-sm mx-auto space-y-4">
+          <h2 className="font-handwriting text-xl text-amber-900 font-bold">Offline Story AI</h2>
           
-          {/* Top Bar */}
-          <header className="flex items-center justify-between py-2 border-b-2 border-amber-200 mb-2">
-            <div>
-              <h1 className="font-handwriting text-xl text-amber-900 font-bold">The Emperor's New Clothes</h1>
-              <span className="text-xs font-semibold text-amber-700">Card {currentSceneIndex + 1} of {STORY_SCENES.length}</span>
-            </div>
+          <div className="p-4 bg-white rounded-2xl border border-amber-300 space-y-3">
+            <p className="text-xs font-bold text-amber-900">Local AI Engine Status</p>
+            <p className="text-xs text-slate-600">{aiProgress || "Ready to initialize local LLM."}</p>
             
-            <div className="flex items-center gap-2">
-              {deferredPrompt && (
-                <button 
-                  onClick={handleInstallPWA}
-                  className="bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1 font-bold shadow hover:bg-amber-700"
-                >
-                  <DownloadIcon /> Install
-                </button>
-              )}
-              <button 
-                onClick={() => setIsQAOpen(true)} 
-                className="p-2 bg-amber-200 text-amber-900 rounded-full hover:bg-amber-300 relative"
-                title="Ask Story Questions"
-              >
-                <HelpCircleIcon />
-                {aiEngine && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>}
-              </button>
-            </div>
-          </header>
-
-          {/* Main Swipable Crayon Card */}
-          <main 
-            onTouchStart={handleTouchStart} 
-            onTouchEnd={handleTouchEnd}
-            className="flex-1 flex flex-col justify-center my-auto relative"
-          >
-            <div className="bg-white rounded-3xl p-4 shadow-xl border-4 border-amber-300 flex flex-col items-center relative overflow-hidden">
-              
-              {/* Canvas Illustration */}
-              <canvas 
-                ref={canvasRef} 
-                width={320} 
-                height={220} 
-                className="rounded-2xl w-full object-cover border-2 border-amber-100 mb-4"
-              />
-
-              {/* Floating Subtitle Card */}
-              <div className="bg-amber-50/90 backdrop-blur border border-amber-200 p-4 rounded-2xl w-full text-center">
-                <h2 className="font-handwriting text-lg font-bold text-amber-900 mb-1">{currentScene.title}</h2>
-                <p className="text-sm text-slate-700 leading-relaxed font-medium">{currentScene.text}</p>
-              </div>
-
-            </div>
-          </main>
-
-          {/* Audio Controls & Navigation */}
-          <footer className="mt-4 space-y-3">
-            
-            {/* Narration Bar */}
-            <div className="bg-amber-100 p-3 rounded-2xl flex items-center justify-between border border-amber-300">
-              <button 
-                onClick={toggleSpeech}
-                className="bg-amber-600 hover:bg-amber-700 text-white p-3 rounded-full shadow flex items-center justify-center"
-              >
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
-              </button>
-
-              <div className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-xl border border-amber-200">
-                <span className="text-xs font-bold text-amber-800 mr-1">Speed:</span>
-                {[0.75, 1.0, 1.25, 1.5].map(rate => (
-                  <button
-                    key={rate}
-                    onClick={() => setSpeechRate(rate)}
-                    className={`text-xs px-2 py-1 rounded-lg font-bold ${speechRate === rate ? 'bg-amber-600 text-white' : 'text-amber-800 hover:bg-amber-100'}`}
-                  >
-                    {rate}x
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Page Dots & Arrows */}
-            <div className="flex items-center justify-between">
-              <button 
-                disabled={currentSceneIndex === 0}
-                onClick={() => setCurrentSceneIndex(i => Math.max(0, i - 1))}
-                className="p-2 bg-amber-200 text-amber-900 rounded-full disabled:opacity-30"
-              >
-                <ChevronLeftIcon />
-              </button>
-
-              <div className="flex gap-1.5">
-                {STORY_SCENES.map((_, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`h-2.5 rounded-full transition-all ${idx === currentSceneIndex ? 'w-6 bg-amber-600' : 'w-2.5 bg-amber-300'}`} 
-                  />
-                ))}
-              </div>
-
-              <button 
-                disabled={currentSceneIndex === STORY_SCENES.length - 1}
-                onClick={() => setCurrentSceneIndex(i => Math.min(STORY_SCENES.length - 1, i + 1))}
-                className="p-2 bg-amber-200 text-amber-900 rounded-full disabled:opacity-30"
-              >
-                <ChevronRightIcon />
-              </button>
-            </div>
-          </footer>
-
-          {/* Local AI Q&A Side Drawer */}
-          {isQAOpen && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex justify-end">
-              <div className="bg-amber-50 w-full max-w-sm h-full p-4 shadow-2xl flex flex-col justify-between">
-                
-                {/* Header */}
-                <div className="flex justify-between items-center pb-3 border-b border-amber-200">
-                  <div>
-                    <h3 className="font-handwriting text-lg font-bold text-amber-900">Offline Story AI</h3>
-                    <p className="text-xs text-amber-700">Runs locally on WebGPU</p>
-                  </div>
-                  <button onClick={() => setIsQAOpen(false)} className="text-slate-500 font-bold text-lg p-1">✕</button>
-                </div>
-
-                {/* AI Initialization Status Banner */}
-                {!aiEngine && (
-                  <div className="my-3 p-3 bg-white rounded-xl border border-amber-300 text-xs text-center space-y-2">
-                    <p className="font-bold text-amber-900">Local AI Model Status</p>
-                    <p className="text-slate-600">{aiProgress || "Click below to initialize the offline model (~250MB)."}</p>
-                    <button
-                      onClick={initializeLocalAI}
-                      disabled={aiLoading}
-                      className="w-full py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 disabled:opacity-50"
-                    >
-                      {aiLoading ? "Downloading & Initializing..." : "Initialize Local AI"}
-                    </button>
-                  </div>
-                )}
-
-                {/* Chat History Container */}
-                <div className="flex-1 overflow-y-auto my-3 space-y-3 pr-1 custom-scrollbar">
-                  {qaHistory.map((msg, i) => (
-                    <div 
-                      key={i} 
-                      className={`p-3 rounded-2xl text-xs ${
-                        msg.role === 'user' 
-                          ? 'bg-amber-600 text-white ml-6' 
-                          : 'bg-white text-slate-800 border border-amber-200 mr-6 shadow-sm'
-                      }`}
-                    >
-                      <p className="font-semibold whitespace-pre-wrap">{msg.content}</p>
-                    </div>
-                  ))}
-                  <div ref={chatBottomRef} />
-                </div>
-
-                {/* Input Form */}
-                <form onSubmit={handleSendQuestion} className="flex gap-2 pt-2 border-t border-amber-200">
-                  <input
-                    type="text"
-                    value={userQuestion}
-                    onChange={(e) => setUserQuestion(e.target.value)}
-                    placeholder="Ask about this scene..."
-                    disabled={isGenerating}
-                    className="flex-1 px-3 py-2 bg-white text-xs border border-amber-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isGenerating || !userQuestion.trim()}
-                    className="px-3 py-2 bg-amber-600 text-white rounded-xl disabled:opacity-50 hover:bg-amber-700"
-                  >
-                    <SendIcon />
-                  </button>
-                </form>
-
-              </div>
-            </div>
-          )}
-
+            <button
+              onClick={initializeLocalAI}
+              disabled={aiLoading || !gpuSupported}
+              className="w-full py-2 bg-amber-600 text-white text-xs font-bold rounded-xl disabled:opacity-50"
+            >
+              {aiLoading ? "Loading Model..." : "Initialize Local AI"}
+            </button>
+          </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    ReactDOM.createRoot(defaultRoot = document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
